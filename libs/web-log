@@ -1,0 +1,28 @@
+2024-10-25 13:59:53 - libs.auxiliary - INFO: create folder eye_hand_data\data20241025
+2024-10-25 13:59:53 - libs.auxiliary - INFO: command:ping -n 1 192.168.1.18
+2024-10-25 14:00:13 - libs.auxiliary - INFO: create folder eye_hand_data\data2024102501
+2024-10-25 14:00:13 - libs.auxiliary - INFO: command:ping -n 1 192.168.1.18
+2024-10-25 14:13:55 - __main__ - INFO: 读 eye_hand_data\data2024102414\1.jpg
+2024-10-25 14:13:55 - __main__ - INFO: 读 eye_hand_data\data2024102414\2.jpg
+2024-10-25 14:13:55 - __main__ - INFO: 读 eye_hand_data\data2024102414\3.jpg
+2024-10-25 14:13:55 - __main__ - INFO: 读 eye_hand_data\data2024102414\4.jpg
+2024-10-25 14:13:55 - __main__ - INFO: 读 eye_hand_data\data2024102414\5.jpg
+2024-10-25 14:13:55 - __main__ - INFO: 读 eye_hand_data\data2024102414\6.jpg
+2024-10-25 14:13:55 - __main__ - INFO: 读 eye_hand_data\data2024102414\7.jpg
+2024-10-25 14:13:55 - __main__ - INFO: 读 eye_hand_data\data2024102414\8.jpg
+2024-10-25 14:13:55 - __main__ - INFO: 读 eye_hand_data\data2024102414\9.jpg
+2024-10-25 14:13:55 - __main__ - INFO: 读 eye_hand_data\data2024102414\10.jpg
+2024-10-25 14:13:56 - __main__ - INFO: 读 eye_hand_data\data2024102414\11.jpg
+2024-10-25 14:13:56 - __main__ - INFO: 读 eye_hand_data\data2024102414\12.jpg
+2024-10-25 14:13:56 - __main__ - INFO: 读 eye_hand_data\data2024102414\13.jpg
+2024-10-25 14:13:56 - __main__ - INFO: 读 eye_hand_data\data2024102414\14.jpg
+2024-10-25 14:13:57 - __main__ - INFO: 旋转矩阵是:
+ [[-0.09386116 -0.99558173  0.00266373]
+ [ 0.99504033 -0.09389796 -0.03283174]
+ [ 0.0329368  -0.00043111  0.99945734]]
+2024-10-25 14:13:57 - __main__ - INFO: 平移向量是:
+ [[ 0.10323402]
+ [-0.0288192 ]
+ [ 0.13575193]]
+2024-10-25 14:13:57 - __main__ - INFO: 四元数是：
+ [ 0.01203595 -0.01124562  0.73946205  0.6729967 ]
