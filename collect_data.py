@@ -1,17 +1,15 @@
 # coding=utf-8
-
+import json
 import logging,os
-
-import yaml
+import socket
+import time
+import sys
 import numpy as np
 import cv2
 import pyrealsense2 as rs
 
 from libs.log_setting import CommonLog
 from libs.auxiliary import create_folder_with_date, get_ip, popup_message
-
-from robotic_arm_package.robotic_arm import *
-
 
 cam0_origin_path = create_folder_with_date() # 提前建立好的存储照片文件的目录
 
@@ -31,13 +29,10 @@ def callback(frame):
 
     if k == ord('s'):  # 若检测到按键 ‘s’，打印字符串
 
-        error_code, joints, curr_pose, arm_err_ptr, sys_err_ptr = robot.Get_Current_Arm_State()  # 获取当前机械臂状态
-
-        logger_.info(f"ret:{error_code}")
-
-        state,pose = error_code,curr_pose
-        logger_.info(f'获取状态：{"成功" if state == 0 else "失败"}，{f"当前位姿为{pose}" if state == 0 else None}')
-        if state == 0:
+        socket_command = '{"command": "get_current_arm_state"}'
+        state,pose = send_cmd(client,socket_command)
+        logger_.info(f'获取状态：{"成功" if state else "失败"}，{f"当前位姿为{pose}" if state else None}')
+        if state:
 
             filename = os.path.join(cam0_origin_path,"poses.txt")
 
@@ -57,6 +52,70 @@ def callback(frame):
     else:
         pass
 
+
+def send_cmd(client, cmd, get_pose=True):
+    """
+    发送命令到机械臂并可选择性地获取姿态(pose)数据
+
+    参数:
+    client: socket客户端连接
+    cmd: 要发送的命令字符串或JSON字符串
+    get_pose: 是否需要获取pose数据
+
+    返回:
+    如果get_pose为True，返回pose数据列表[x, y, z, rx, ry, rz]
+    如果get_pose为False，返回布尔值表示命令是否成功发送
+    """
+    # 发送命令
+    client.send(cmd.encode('utf-8'))
+
+    # 如果不需要获取pose，直接返回成功
+    if not get_pose:
+        response = client.recv(1024).decode('utf-8')
+        logger_.info(f"response:{response}")
+        return True
+
+    # 等待接收数据
+    time.sleep(0.1)  # 给予系统响应时间
+
+    # 接收响应数据
+    response = client.recv(1024).decode('utf-8')
+
+    try:
+        # 解析JSON响应
+        data = json.loads(response)
+
+        logger_.info(f'data:{data}')
+
+        # 检查响应状态
+        if data.get("state") != "current_arm_state":
+            return False, "响应状态错误"
+
+
+        # 获取pose数据并转换为物理单位
+        pose_raw = data["arm_state"]["pose"]
+
+        # 根据协议转换单位:
+        # 位置(x,y,z): 从 0.001mm 转换为 m
+        # 姿态(rx,ry,rz): 从 0.001rad 转换为 rad
+        pose_converted = [
+            pose_raw[0] / 1000000,  # x: 0.001mm → m
+            pose_raw[1] / 1000000,  # y: 0.001mm → m
+            pose_raw[2] / 1000000,  # z: 0.001mm → m
+            pose_raw[3] / 1000,  # rx: 0.001rad → rad
+            pose_raw[4] / 1000,  # ry: 0.001rad → rad
+            pose_raw[5] / 1000  # rz: 0.001rad → rad
+        ]
+
+        return True, pose_converted
+
+    except json.JSONDecodeError:
+        return False, "JSON解析错误"
+    except KeyError as e:
+        return False, f"缺少关键数据: {e}"
+    except Exception as e:
+        return False, f"获取pose时发生错误: {str(e)}"
+#
 def displayD435():
 
     pipeline = rs.pipeline()
@@ -97,21 +156,15 @@ if __name__ == '__main__':
     robot_ip = get_ip()
 
 
+
     logger_.info(f'robot_ip:{robot_ip}')
 
     if robot_ip:
 
-        with open("config.yaml", 'r', encoding='utf-8') as file:
-            data = yaml.safe_load(file)
-
-        ROBOT_TYPE = data.get("ROBOT_TYPE")
-
-        robot = Arm(ROBOT_TYPE, robot_ip)
-
-        robot.Change_Work_Frame()
-
-        # API版本信息
-        print(robot.API_Version())
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client.connect((robot_ip, 8080))
+        socket_command = '{"command":"set_change_work_frame","frame_name":"Base"}'
+        send_cmd(client,socket_command,get_pose = False)
 
     else:
 

@@ -18,9 +18,13 @@
 
 ![image](picture/f6c716fb-c8d2-4adc-b3da-a86c6b1e78d0.png)
 
+
+
 - 第二种是相机固定在机械臂之外某处
 
-​	![44776e79-47f7-4de2-9ef2-172b654169d5](picture/44776e79-47f7-4de2-9ef2-172b654169d5-17291349013411.png)
+  ​	![44776e79-47f7-4de2-9ef2-172b654169d5](picture/44776e79-47f7-4de2-9ef2-172b654169d5-17291349013411.png)
+
+
 
 ## 原理
 
@@ -40,74 +44,72 @@
 
 - A：机械臂末端在机械臂坐标系下的位姿，通过机械臂API获取。（已知）。
 
-  $`
+  $
   ^{base}_{end}M
-  `$
+  $
   
 - B：相机在机器人末端坐标系下的位姿，这个变换是固定的，只要知道这个变换，我们就可以随时计算相机的实际位置，所以这就是我们想求的东西。（未知，待求）
 
   
 
-  
-  $`
+  $
   ^{end}_{camera}M
-  `$
+  $
   
 - C：相机在标定板坐标系下的位姿，这个其实就是求解相机的外参（由相机标定求出）。
 
-  
-  $`
+  $
   ^{board}_{camera}M
-  `$
+  $
   
 - D：标定板在机器人坐标系下的位姿。在标定过程中，只有机械臂末端在动，标定板和机械臂末端不动，这个位姿关系是固定不变的。
 
-  $`
+  $
   ^{base}_{board}M
-  `$
+  $
 
 
 
 
 
-所以我们只要计算得到B变换，那么标定板在机械臂坐标系下的位姿D也就自然得到了$`M^{base}_{board} =M^{base}_{end} \cdot M^{end}_{camera} \cdot  M^{camera}_{board}`$
+所以我们只要计算得到B变换，那么标定板在机械臂坐标系下的位姿D也就自然得到了$^{base}_{board}M =^{base}_{end} M\cdot ^{end}_{camera}M \cdot  ^{camera}_{board}M$
 
 如图2所示，我们让机械臂运动两个位置，保证这两个位置下都可以看到标定板，然后构建空间变换回路：
 
 ![图2 机械臂运动到两个位置，构建变换回路](picture/29fb4d433468f12530eca3e2a563da72.png)
 
-$`A_{1} \cdot B \cdot C_{1}^{-1}=A_{2} \cdot B \cdot C_{2}^{-1}   \\ 
-\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \  || \\ \allowbreak \left(A_{2}^{-1} \cdot A_{1}\right) \cdot B=B \cdot\left(C_{2}^{-1} \cdot C_{1}\right)`$
+$A_{1} \cdot B \cdot C_{1}^{-1}=A_{2} \cdot B \cdot C_{2}^{-1}   \\ 
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \  || \\  \left(A_{2}^{-1} \cdot A_{1}\right) \cdot B=B \cdot\left(C_{2}^{-1} \cdot C_{1}\right)$
 
 等同于下面的公式：
 
 
 
-$`{M_1}^{base}_{end} \cdot {M_1}^{end}_{camera} \cdot {M_1}^{camera}_{board} = {M_2}^{base}_{end} \cdot {M_2}^{end}_{camera} \cdot {M_2}^{camera}_{board} \\
+$^{base}_{end}{M_1} \cdot ^{end}_{camera}{M_1} \cdot ^{camera}_{board}{M_1} = ^{base}_{end}{M_2} \cdot ^{end}_{camera}{M_2} \cdot ^{camera}_{board}{M_2} \\
 \parallel \\
-\left({M_2}^{base}_{end}\right)^{-1} \cdot {M_1}^{base}_{end} \cdot M^{end}_{camera} = M^{end}_{camera} \cdot {M_2}^{camera}_{board} \cdot \left({M_1}^{camera}_{board}\right)^{-1}`$
+\left(^{base}_{end}{M_2}\right)^{-1} \cdot ^{base}_{end}{M_1} \cdot ^{end}_{camera}M_1 = ^{end}_{camera}M_2 \cdot ^{camera}_{board}{M_2} \cdot \left(^{camera}_{board}{M_1}\right)^{-1}$
 
 这是一个典型的**AX=XB**问题，而且根据定义，其中X是一个4X4齐次变换矩阵：
 
-$`X=\left[\matrix{R &t \\0&1}\right]`$
+$X=\left[\matrix{R &t \\0&1}\right]$
 
 手眼标定的目的就是为了计算出X
 
 ​	
 
-### 2.眼在手外（eye-to-hand)
+### 2 .眼在手外（eye-to-hand)
 
-![44776e79-47f7-4de2-9ef2-172b654169d5](picture/44776e79-47f7-4de2-9ef2-172b654169d5-17291482180503.png)
+### ![44776e79-47f7-4de2-9ef2-172b654169d5](picture/44776e79-47f7-4de2-9ef2-172b654169d5-17291482180503.png)
 
 **眼在手外**标定时**固定机械臂基座和相机**，将**标定板固定在机械臂末端**，所以标定过程中**标定板与机械臂末端的关系固定不变，以及相机与机器人基座标的关系固定不变**
 
-标定的目标：相机到机械臂基座坐标系的变换矩阵$$M^{base}_{camera}$$
+标定的目标：相机到机械臂基座坐标系的变换矩阵$$^{base}_{camera}M$$
 
 实现方法：1.把标定板固定在机械臂末端
 
 ​					2.移动机械臂末端，使用相机拍摄不同机械臂姿态下的标定板图片n张 (10~20)
 
-每次采集图片和机械臂位姿，都存在下面等式：$`M^{end}_{board} = M^{end}_{base} \cdot M^{base}_{camera} \cdot M^{camera}_{board}`$
+每次采集图片和机械臂位姿，都存在下面等式：$^{end}_{board}M = ^{end}_{base}M \cdot ^{base}_{camera}M \cdot ^{camera}_{board}M$
 
 
 
@@ -115,9 +117,9 @@ $`X=\left[\matrix{R &t \\0&1}\right]`$
 
 | 符号               | 描述                         |
 | ------------------ | ---------------------------- |
-| $$^{end}_{board}M$$  | 标定板到机械臂末端的变换矩阵（因为标定过程中标定板固定在机械臂末端，标定板到机械臂末端的变化矩阵不变） |
-| $$^{end}_{base}M $$    | 可以通过机械臂末端位姿算出   |
-| $$^{base}_{camera}M$$  | 手眼标定需要求的             |
+| $$^{end}_{board}M$$ | 标定板到机械臂末端的变换矩阵（因为标定过程中标定板固定在机械臂末端，标定板到机械臂末端的变化矩阵不变） |
+| $$^{end}_{base}M $$ | 可以通过机械臂末端位姿算出   |
+| $$^{base}_{camera}M$$ | 手眼标定需要求的             |
 | $$^{camera}_{board}M$$ | 通过相机标定方法得到         |
 
 
@@ -126,21 +128,13 @@ $`X=\left[\matrix{R &t \\0&1}\right]`$
 
 **The Cauchy-Schwarz Inequality**
 
-$` ^{end}_{base}M_1 \cdot  ^{base}_{camera}M_1 \cdot ^{camera}_{board}M_1 = ^{end}_{base}M_2 \cdot ^{base}_{camera}M_2 \cdot ^{camera}_{board}M_2 \\ \parallel \\\ 
+${M_1}^{end}_{base} \cdot  {M_1}^{base}_{camera} \cdot {M_1}^{camera}_{board} = ^{end}_{base}M_2 \cdot ^{base}_{camera}M_2 \cdot ^{camera}_{board}M_2 \\ \parallel \\\ 
 ^{end}_{base}M_2^{-1} \cdot ^{end}_{base}M_1 \cdot  ^{base}_{camera}M_1 =^{base}_{camera}M_2 \cdot ^{camera}_{board}M_2 \cdot ^{camera}_{board}M_1^{-1}\\  ......   \\ 
-^{end}_{base}M_n^{-1} \cdot ^{end}_{base}M_{n-1} \cdot ^{base}_{camera}M_{n-1}=^{base}_{camera}M_n \cdot ^{camera}_{board}M_n \cdot ^{camera}_{board}M_{n-1}^{-1}`$
+^{end}_{base}M_n^{-1} \cdot ^{end}_{base}M_{n-1} \cdot ^{base}_{camera}M_{n-1}=^{base}_{camera}M_n \cdot ^{camera}_{board}M_n \cdot ^{camera}_{board}M_{n-1}^{-1}$
 
 
 
-
-
-
-
-
-
-
-
-这也是是一个典型的**AX=XB**问题，而且根据定义，其中X是一个4X4齐次变换矩阵，其中R是相机到机械臂基坐标系的旋转矩阵，t是相机到机械臂基坐标系的平移向量：$`X=\left[\matrix{R &t \\0&1}\right]`$
+这也是是一个典型的**AX=XB**问题，而且根据定义，其中X是一个4X4齐次变换矩阵，其中R是相机到机械臂基坐标系的旋转矩阵，t是相机到机械臂基坐标系的平移向量：$X=\left[\matrix{R &t \\0&1}\right]$
 
 手眼标定的目的就是为了计算出X。
 
@@ -432,27 +426,7 @@ pip install -r requirements.txt
 
 
 
-#### 	 程序里的API版本和机械臂控制器版本对应
 
-
-
-1. 程序里的的机械臂API版本为4.3.3
-
-2. 打开示教器，查看当前机械臂控制器版本
-
-   示教器：配置-机械臂配置-版本信息
-
-   ![image-20241025135921401](picture/image-20241025135921401.png)
-
-3. 查看机械臂控制器版本和当前程序使用的机械臂API版本是否对应
-
-   ![image-20241025134353953](picture/image-20241025134353953.png)
-
-   4. 根据控制器版本和API版本对应关系，选择特定版本的控制器软件或者机械臂API进行升级替换
-
-      - 升级控制器版本方法
-
-        ![mmexport1729835677761](picture/mmexport1729835677761.jpg)
 
 
 
@@ -460,15 +434,13 @@ pip install -r requirements.txt
 
 #### 参数配置
 
-在配置文件（config.yaml）中设置标定板参数和机械臂类型
+在配置文件（config.yaml）中设置标定板参数
 
-![image-20241025132928948](picture/image-20241025132928948.png)
+![image-20250403064543828](picture/image-20250403064543828.png)
 
 ​		
 
-config.yaml里的配置文件如下，有下面四个
-
-​       ROBOT_TYPE：机械臂型号，默认是65 ，对应RM65臂
+config.yaml里的配置参数如下，有下面三个
 
 ​        xx:标定板的横向角点数（长边格子数减1），默认为11，例如下图长边12个格子，角点数为11
 
@@ -531,13 +503,7 @@ config.yaml里的配置文件如下，有下面四个
 
 ​		运行脚本`compute_in_hand.py`，获取标定结果
 
-​		
-
-
-
-得出**相机坐标系**相对于**机械臂末端**坐标系的**旋转矩阵**和**平移向量**
-
-
+​        得出**相机坐标系**相对于**机械臂末端**坐标系的**旋转矩阵**和**平移向量**
 
 #### 眼在手外
 
@@ -581,13 +547,13 @@ config.yaml里的配置文件如下，有下面四个
 
 
 
+**平移向量**的单位是米
+
+
+
 #### 误差范围
 
 受采集到的图片的质量影响，标定结果中的平移向量与实际的差距在1cm之内。
-
-
-
-
 
 ## 标定过程中可能出现的问题
 
@@ -636,36 +602,6 @@ python compute_to_hand.py
 - 采集更多的样本数据，一般来说，至少需要10组以上不同的姿态数据。
 - 更多的数据能提高标定的稳定性和准确性。
 
-
-
-### 问题2
-
-问题描述：运行数据采集程序（python collect_data.py ），总是出现异常（崩溃）而挂掉
-
-问题原因：
-
-​				当前程序API版本和机械臂控制器版本不一致
-
-解决方案：
-
-- 打开示教器，查看当前机械臂控制器版本
-
-  示教器：配置-机械臂配置-版本信息
-
-  ![image-20241025135921401](picture/image-20241025135921401.png)
-
-- 当前使用机械臂API版本（4.3.3）
-
-- 查看机械臂控制器版本和当前程序使用的机械臂API版本是否对应
-
-  ![image-20241025134353953](picture/image-20241025134353953.png)
-
-- 根据控制器版本和API版本对应关系，选择特定版本的控制器软件或者API进行升级替换
-
-  - 升级控制器版本方法
-
-    ![mmexport1729835677761](picture/mmexport1729835677761.jpg)
-
 ## 手眼标定结果如何使用
 
 
@@ -697,9 +633,9 @@ python compute_to_hand.py
 
 ![../../../_images/hand-eye-robot-ee-robot-base-coordinate-systems-with-camera.png](picture/hand-eye-robot-ee-robot-base-coordinate-systems-with-camera.png)
 
-在这种情况下，坐标转换是间接完成的：$`H^{ROB}_{OBJ} = H^{ROB}_{EE} \cdot  H^{EE}_{CAM} \cdot H^{CAM}_{OBJ}`$
+在这种情况下，坐标转换是间接完成的：$H^{ROB}_{OBJ} = H^{ROB}_{EE} \cdot  H^{EE}_{CAM} \cdot H^{CAM}_{OBJ}$
 
-末端执行器相对于机械臂基座的位姿$`H^{ROB}_{EE}`$是已知的，通过机械臂API可以获取得到，相机相对于末端执行器的位姿$`H^{EE}_{CAM}`$由手眼标定得到。
+末端执行器相对于机械臂基座的位姿$H^{ROB}_{EE}$是已知的，通过机械臂API可以获取得到，相机相对于末端执行器的位姿$H^{EE}_{CAM}$由手眼标定得到。
 
 ![img](picture/hand-eye-eye-in-hand-all-poses.png)
 
@@ -713,15 +649,15 @@ python compute_to_hand.py
 
 以下方程描述了如何将单个3D点从相机坐标系转换到机械臂基坐标系：
 
-​						$`p^{ROB}=H^{ROB}_{EE} \cdot H^{EE}_{CAM} \cdot p^{CAM}`$
+​						$p^{ROB}=H^{ROB}_{EE} \cdot H^{EE}_{CAM} \cdot p^{CAM}$
 
-​                      $` \begin{bmatrix} x^r \\ y^r \\ z^r \\ 1 \end{bmatrix} = \begin{bmatrix} R_e^r & t_e^r \\ 0 & 1 \end{bmatrix} \cdot \begin{bmatrix} R_c^e & t_c^e \\ 0 & 1 \end{bmatrix} \cdot \begin{bmatrix} x^c \\ y^c \\ z^c \\ 1 \end{bmatrix} `$
+​                      $\begin{bmatrix} x^r \\ y^r \\ z^r \\ 1 \end{bmatrix} = \begin{bmatrix} R_e^r & t_e^r \\ 0 & 1 \end{bmatrix} \cdot \begin{bmatrix} R_c^e & t_c^e \\ 0 & 1 \end{bmatrix} \cdot \begin{bmatrix} x^c \\ y^c \\ z^c \\ 1 \end{bmatrix}$
 
 如果要将物体位姿从相机坐标系转换到机械臂基坐标系。
 
-​						$`H^{ROB}_{OBJ}=H^{ROB}_{EE} \cdot H^{EE}_{CAM} \cdot H^{CAM}_{OBJ}`$
+​						$H^{ROB}_{OBJ}=H^{ROB}_{EE} \cdot H^{EE}_{CAM} \cdot H^{CAM}_{OBJ}$
 
-​                   $`\begin{bmatrix} R_o^r & t_o^r \\ 0 & 1 \end{bmatrix}=\begin{bmatrix} R_e^r & e_e^r \\ 0 & 1 \end{bmatrix} \cdot  \begin{bmatrix} R_c^e & t_c^e \\ 0 & 1 \end{bmatrix} \cdot \begin{bmatrix} R_o^c & t_o^c \\ 0 & 1 \end{bmatrix}`$
+​                   $\begin{bmatrix} R_o^r & t_o^r \\ 0 & 1 \end{bmatrix}=\begin{bmatrix} R_e^r & e_e^r \\ 0 & 1 \end{bmatrix} \cdot  \begin{bmatrix} R_c^e & t_c^e \\ 0 & 1 \end{bmatrix} \cdot \begin{bmatrix} R_o^c & t_o^c \\ 0 & 1 \end{bmatrix}$
 
 
 
@@ -900,7 +836,7 @@ python compute_to_hand.py
 
 相机可以通过模型获取物体在相机坐标系的里的位姿，**物体相对于机械臂的位姿**通过相机相对于机械臂基坐标系的位姿和物体相对于相机相机坐标系的位姿通过后乘法计算得到的：
 
-$` H_{OBJ}^{ROB} = H_{CAM}^{ROB} \cdot H_{OBJ}^{CAM}`$
+$H_{OBJ}^{ROB} = H_{CAM}^{ROB} \cdot H_{OBJ}^{CAM}$
 
 ![../../../_images/hand-eye-eye-to-hand-all-poses.png](picture/hand-eye-eye-to-hand-all-poses.png)
 
@@ -910,15 +846,15 @@ $` H_{OBJ}^{ROB} = H_{CAM}^{ROB} \cdot H_{OBJ}^{CAM}`$
 
 以下方程描述了如何将单个3D点从相机坐标系转换到机械臂基坐标系：
 
-​						$`p^{ROB}=H^{ROB}_{CAM} \cdot p^{CAM}`$
+​						$p^{ROB}=H^{ROB}_{CAM} \cdot p^{CAM}$
 
-​                      $` \begin{bmatrix} x^r \\ y^r \\ z^r \\ 1 \end{bmatrix} = \begin{bmatrix} R_c^r & t_c^r \\ 0 & 1 \end{bmatrix} \cdot \begin{bmatrix} x^c \\ y^c \\ z^c \\ 1 \end{bmatrix} `$
+​                      $\begin{bmatrix} x^r \\ y^r \\ z^r \\ 1 \end{bmatrix} = \begin{bmatrix} R_c^r & t_c^r \\ 0 & 1 \end{bmatrix} \cdot \begin{bmatrix} x^c \\ y^c \\ z^c \\ 1 \end{bmatrix}$
 
 如果要将物体位姿从相机坐标系转换到机械臂基坐标系。
 
-​						$`H^{ROB}_{OBJ}=H^{ROB}_{CAM} \cdot H^{CAM}_{OBJ}`$
+​						$H^{ROB}_{OBJ}=H^{ROB}_{CAM} \cdot H^{CAM}_{OBJ}$
 
-​                   $`\begin{bmatrix} R_o^r & t_o^r \\ 0 & 1 \end{bmatrix}=\begin{bmatrix} R_c^r & e_c^r \\ 0 & 1 \end{bmatrix} \cdot \begin{bmatrix} R_o^c & t_o^c \\ 0 & 1 \end{bmatrix}`$
+​                   $\begin{bmatrix} R_o^r & t_o^r \\ 0 & 1 \end{bmatrix}=\begin{bmatrix} R_c^r & e_c^r \\ 0 & 1 \end{bmatrix} \cdot \begin{bmatrix} R_o^c & t_o^c \\ 0 & 1 \end{bmatrix}$
 
 
 
@@ -1055,3 +991,4 @@ $` H_{OBJ}^{ROB} = H_{CAM}^{ROB} \cdot H_{OBJ}^{CAM}`$
 
 ​		代码中rotation_matrix和translation_vector变量分别是眼在手外**手眼标定**得到的**旋转矩阵**和**平移向量**
 
+### 
