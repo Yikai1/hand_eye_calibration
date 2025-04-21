@@ -44,54 +44,44 @@
 
 - A：机械臂末端在机械臂坐标系下的位姿，通过机械臂API获取。（已知）。
 
-  $
-  ^{base}_{end}M
-  $
+$$ {}^{base}_{end}M $$
   
 - B：相机在机器人末端坐标系下的位姿，这个变换是固定的，只要知道这个变换，我们就可以随时计算相机的实际位置，所以这就是我们想求的东西。（未知，待求）
 
-  
-
-  $
-  ^{end}_{camera}M
-  $
+$$ {}^{end}_{camera}M $$
   
 - C：相机在标定板坐标系下的位姿，这个其实就是求解相机的外参（由相机标定求出）。
-
-  $
-  ^{board}_{camera}M
-  $
   
-- D：标定板在机器人坐标系下的位姿。在标定过程中，只有机械臂末端在动，标定板和机械臂末端不动，这个位姿关系是固定不变的。
+$$ {}^{board}_{camera}M $$
 
-  $
-  ^{base}_{board}M
-  $
+- D：标定板在机器人坐标系下的位姿。在标定过程中，只有机械臂末端在动，标定板和机械臂基座不动，这个位姿关系是固定不变的。
 
 
+$$ {}^{base}_{board}M $$
 
+所以我们只要计算得到B变换，那么标定板在机械臂坐标系下的位姿D也就自然得到了:
 
-
-所以我们只要计算得到B变换，那么标定板在机械臂坐标系下的位姿D也就自然得到了$^{base}_{board}M =^{base}_{end} M\cdot ^{end}_{camera}M \cdot  ^{camera}_{board}M$
+$$ {}^{base}{board}M = {}^{base}{end}M \cdot {}^{end}{camera}M \cdot {}^{camera}{board}M $$
 
 如图2所示，我们让机械臂运动两个位置，保证这两个位置下都可以看到标定板，然后构建空间变换回路：
 
 ![图2 机械臂运动到两个位置，构建变换回路](picture/29fb4d433468f12530eca3e2a563da72.png)
 
-$A_{1} \cdot B \cdot C_{1}^{-1}=A_{2} \cdot B \cdot C_{2}^{-1}   \\ 
-\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \  || \\  \left(A_{2}^{-1} \cdot A_{1}\right) \cdot B=B \cdot\left(C_{2}^{-1} \cdot C_{1}\right)$
+$$ A_1 \cdot B \cdot C_1^{-1} = A_2 \cdot B \cdot C_2^{-1} $$
+
+$$ \left( A_2^{-1} \cdot A_1 \right) \cdot B = B \cdot \left( C_2^{-1} \cdot C_1 \right) $$
 
 等同于下面的公式：
 
 
 
-$^{base}_{end}{M_1} \cdot ^{end}_{camera}{M_1} \cdot ^{camera}_{board}{M_1} = ^{base}_{end}{M_2} \cdot ^{end}_{camera}{M_2} \cdot ^{camera}_{board}{M_2} \\
-\parallel \\
-\left(^{base}_{end}{M_2}\right)^{-1} \cdot ^{base}_{end}{M_1} \cdot ^{end}_{camera}M_1 = ^{end}_{camera}M_2 \cdot ^{camera}_{board}{M_2} \cdot \left(^{camera}_{board}{M_1}\right)^{-1}$
+$$ {}^{base}{end}M_1 \cdot {}^{end}{camera}M_1 \cdot {}^{camera}{board}M_1 = {}^{base}{end}M_2 \cdot {}^{end}{camera}M_2 \cdot {}^{camera}{board}M_2 $$
+
+$$ \left( {}^{base}{end}M_2 \right)^{-1} \cdot {}^{base}{end}M_1 \cdot {}^{end}{camera}M_1 = {}^{end}{camera}M_2 \cdot {}^{camera}{board}M_2 \cdot \left( {}^{camera}{board}M_1 \right)^{-1} $$
 
 这是一个典型的**AX=XB**问题，而且根据定义，其中X是一个4X4齐次变换矩阵：
 
-$X=\left[\matrix{R &t \\0&1}\right]$
+$$ X = \begin{bmatrix} R & t \\\ 0 & 1 \end{bmatrix} $$
 
 手眼标定的目的就是为了计算出X
 
@@ -103,24 +93,27 @@ $X=\left[\matrix{R &t \\0&1}\right]$
 
 **眼在手外**标定时**固定机械臂基座和相机**，将**标定板固定在机械臂末端**，所以标定过程中**标定板与机械臂末端的关系固定不变，以及相机与机器人基座标的关系固定不变**
 
-标定的目标：相机到机械臂基座坐标系的变换矩阵$$^{base}_{camera}M$$
+标定的目标：相机到机械臂基座坐标系的变换矩阵
+
+$$ {}^{base}_{camera}M $$
 
 实现方法：1.把标定板固定在机械臂末端
 
 ​					2.移动机械臂末端，使用相机拍摄不同机械臂姿态下的标定板图片n张 (10~20)
 
-每次采集图片和机械臂位姿，都存在下面等式：$^{end}_{board}M = ^{end}_{base}M \cdot ^{base}_{camera}M \cdot ^{camera}_{board}M$
+每次采集图片和机械臂位姿，都存在下面等式：
 
+$$ {}^{end}{board}M = {}^{end}{base}M \cdot {}^{base}{camera}M \cdot {}^{camera}{board}M $$
 
 
 其中：
 
 | 符号               | 描述                         |
 | ------------------ | ---------------------------- |
-| $$^{end}_{board}M$$ | 标定板到机械臂末端的变换矩阵（因为标定过程中标定板固定在机械臂末端，标定板到机械臂末端的变化矩阵不变） |
-| $$^{end}_{base}M $$ | 可以通过机械臂末端位姿算出   |
-| $$^{base}_{camera}M$$ | 手眼标定需要求的             |
-| $$^{camera}_{board}M$$ | 通过相机标定方法得到         |
+|$$^{end}_{board}M$$  | 标定板到机械臂末端的变换矩阵（因为标定过程中标定板固定在机械臂末端，标定板到机械臂末端的变化矩阵不变） |
+|$${}^{end}_{base}M$$ | 可以通过机械臂末端位姿算出   |
+|$${}^{base}_{camera}M$$ | 手眼标定需要求的             |
+|$${}^{camera}_{board}M$$ | 通过相机标定方法得到         |
 
 
 
@@ -128,13 +121,19 @@ $X=\left[\matrix{R &t \\0&1}\right]$
 
 **The Cauchy-Schwarz Inequality**
 
-${M_1}^{end}_{base} \cdot  {M_1}^{base}_{camera} \cdot {M_1}^{camera}_{board} = ^{end}_{base}M_2 \cdot ^{base}_{camera}M_2 \cdot ^{camera}_{board}M_2 \\ \parallel \\\ 
-^{end}_{base}M_2^{-1} \cdot ^{end}_{base}M_1 \cdot  ^{base}_{camera}M_1 =^{base}_{camera}M_2 \cdot ^{camera}_{board}M_2 \cdot ^{camera}_{board}M_1^{-1}\\  ......   \\ 
-^{end}_{base}M_n^{-1} \cdot ^{end}_{base}M_{n-1} \cdot ^{base}_{camera}M_{n-1}=^{base}_{camera}M_n \cdot ^{camera}_{board}M_n \cdot ^{camera}_{board}M_{n-1}^{-1}$
+$$ {}^{end}{base}M_1 \cdot {}^{base}{camera}M_1 \cdot {}^{camera}{board}M_1 = {}^{end}{base}M_2 \cdot {}^{base}{camera}M_2 \cdot {}^{camera}{board}M_2 $$
+
+$$ {}^{end}{base}M_2^{-1} \cdot {}^{end}{base}M_1 \cdot {}^{base}{camera}M_1 = {}^{base}{camera}M_2 \cdot {}^{camera}{board}M_2 \cdot {}^{camera}{board}M_1^{-1} $$
+
+$$ \vdots $$
+
+$$ {}^{end}{base}M_n^{-1} \cdot {}^{end}{base}M_{n-1} \cdot {}^{base}{camera}M{n-1} = {}^{base}{camera}M_n \cdot {}^{camera}{board}M_n \cdot {}^{camera}{board}M{n-1}^{-1} $$
 
 
 
-这也是是一个典型的**AX=XB**问题，而且根据定义，其中X是一个4X4齐次变换矩阵，其中R是相机到机械臂基坐标系的旋转矩阵，t是相机到机械臂基坐标系的平移向量：$X=\left[\matrix{R &t \\0&1}\right]$
+这也是是一个典型的**AX=XB**问题，而且根据定义，其中X是一个4X4齐次变换矩阵，其中R是相机到机械臂基坐标系的旋转矩阵，t是相机到机械臂基坐标系的平移向量：
+
+$$ X = \begin{bmatrix} R & t \\\ 0 & 1 \end{bmatrix} $$
 
 手眼标定的目的就是为了计算出X。
 
@@ -633,9 +632,19 @@ python compute_to_hand.py
 
 ![../../../_images/hand-eye-robot-ee-robot-base-coordinate-systems-with-camera.png](picture/hand-eye-robot-ee-robot-base-coordinate-systems-with-camera.png)
 
-在这种情况下，坐标转换是间接完成的：$H^{ROB}_{OBJ} = H^{ROB}_{EE} \cdot  H^{EE}_{CAM} \cdot H^{CAM}_{OBJ}$
+在这种情况下，坐标转换是间接完成的：
 
-末端执行器相对于机械臂基座的位姿$H^{ROB}_{EE}$是已知的，通过机械臂API可以获取得到，相机相对于末端执行器的位姿$H^{EE}_{CAM}$由手眼标定得到。
+$$ H^{ROB}{OBJ} = H^{ROB}{EE} \cdot H^{EE}{CAM} \cdot H^{CAM}{OBJ} $$
+
+末端执行器相对于机械臂基座的位姿
+
+$$H^{ROB}_{EE}$$
+
+是已知的，通过机械臂API可以获取得到，相机相对于末端执行器的位姿
+
+$$H^{EE}_{CAM}$$
+
+由手眼标定得到。
 
 ![img](picture/hand-eye-eye-in-hand-all-poses.png)
 
@@ -649,16 +658,15 @@ python compute_to_hand.py
 
 以下方程描述了如何将单个3D点从相机坐标系转换到机械臂基坐标系：
 
-​						$p^{ROB}=H^{ROB}_{EE} \cdot H^{EE}_{CAM} \cdot p^{CAM}$
+$$ p^{ROB} = H^{ROB}{EE} \cdot H^{EE}{CAM} \cdot p^{CAM} $$
 
-​                      $\begin{bmatrix} x^r \\ y^r \\ z^r \\ 1 \end{bmatrix} = \begin{bmatrix} R_e^r & t_e^r \\ 0 & 1 \end{bmatrix} \cdot \begin{bmatrix} R_c^e & t_c^e \\ 0 & 1 \end{bmatrix} \cdot \begin{bmatrix} x^c \\ y^c \\ z^c \\ 1 \end{bmatrix}$
+$$ \begin{bmatrix} x^r \\\ y^r \\\ z^r \\\ 1 \end{bmatrix} = \begin{bmatrix} R_e^r & t_e^r \\\ 0 & 1 \end{bmatrix} \cdot \begin{bmatrix} R_c^e & t_c^e \\\ 0 & 1 \end{bmatrix} \cdot \begin{bmatrix} x^c \\\ y^c \\\ z^c \\\ 1 \end{bmatrix} $$
 
 如果要将物体位姿从相机坐标系转换到机械臂基坐标系。
 
-​						$H^{ROB}_{OBJ}=H^{ROB}_{EE} \cdot H^{EE}_{CAM} \cdot H^{CAM}_{OBJ}$
+$$ H^{ROB}{OBJ} = H^{ROB}{EE} \cdot H^{EE} {CAM} \cdot H^{CAM} {OBJ} $$
 
-​                   $\begin{bmatrix} R_o^r & t_o^r \\ 0 & 1 \end{bmatrix}=\begin{bmatrix} R_e^r & e_e^r \\ 0 & 1 \end{bmatrix} \cdot  \begin{bmatrix} R_c^e & t_c^e \\ 0 & 1 \end{bmatrix} \cdot \begin{bmatrix} R_o^c & t_o^c \\ 0 & 1 \end{bmatrix}$
-
+$$ \begin{bmatrix} R_o^r & t_o^r \\\ 0 & 1 \end{bmatrix} = \begin{bmatrix} R_e^r & t_e^r \\\ 0 & 1 \end{bmatrix} \cdot \begin{bmatrix} R_c^e & t_c^e \\\ 0 & 1 \end{bmatrix} \cdot \begin{bmatrix} R_o^c & t_o^c \\\ 0 & 1 \end{bmatrix} $$
 
 
 ​	由此产生的位姿是机械臂当前工具坐标系圆心应该达到的位姿进行捡取。(标定时采集的机械臂位姿也是当前工具坐标系相对于机械臂基坐标系位姿)
@@ -836,7 +844,7 @@ python compute_to_hand.py
 
 相机可以通过模型获取物体在相机坐标系的里的位姿，**物体相对于机械臂的位姿**通过相机相对于机械臂基坐标系的位姿和物体相对于相机相机坐标系的位姿通过后乘法计算得到的：
 
-$H_{OBJ}^{ROB} = H_{CAM}^{ROB} \cdot H_{OBJ}^{CAM}$
+$$ H^{ROB}{OBJ} = H^{ROB}{CAM} \cdot H^{CAM}{OBJ} $$
 
 ![../../../_images/hand-eye-eye-to-hand-all-poses.png](picture/hand-eye-eye-to-hand-all-poses.png)
 
@@ -846,17 +854,15 @@ $H_{OBJ}^{ROB} = H_{CAM}^{ROB} \cdot H_{OBJ}^{CAM}$
 
 以下方程描述了如何将单个3D点从相机坐标系转换到机械臂基坐标系：
 
-​						$p^{ROB}=H^{ROB}_{CAM} \cdot p^{CAM}$
+$$ p^{ROB} = H^{ROB}{CAM} \cdot p^{CAM} $$
 
-​                      $\begin{bmatrix} x^r \\ y^r \\ z^r \\ 1 \end{bmatrix} = \begin{bmatrix} R_c^r & t_c^r \\ 0 & 1 \end{bmatrix} \cdot \begin{bmatrix} x^c \\ y^c \\ z^c \\ 1 \end{bmatrix}$
+$$ \begin{bmatrix} x^r \\\ y^r \\\ z^r \\\ 1 \end{bmatrix} = \begin{bmatrix} R_c^r & t_c^r \\\ 0 & 1 \end{bmatrix} \cdot \begin{bmatrix} x^c \\\ y^c \\\ z^c \ 1 \end{bmatrix} $$
 
 如果要将物体位姿从相机坐标系转换到机械臂基坐标系。
 
-​						$H^{ROB}_{OBJ}=H^{ROB}_{CAM} \cdot H^{CAM}_{OBJ}$
+$$ H^{ROB}{OBJ} = H^{ROB}{CAM} \cdot H^{CAM}{OBJ} $$
 
-​                   $\begin{bmatrix} R_o^r & t_o^r \\ 0 & 1 \end{bmatrix}=\begin{bmatrix} R_c^r & e_c^r \\ 0 & 1 \end{bmatrix} \cdot \begin{bmatrix} R_o^c & t_o^c \\ 0 & 1 \end{bmatrix}$
-
-
+$$ \begin{bmatrix} R_o^r & t_o^r \\\ 0 & 1 \end{bmatrix} = \begin{bmatrix} R_c^r & t_c^r \\\ 0 & 1 \end{bmatrix} \cdot \begin{bmatrix} R_o^c & t_o^c \\\ 0 & 1 \end{bmatrix} $$
 
 #### 代码
 
