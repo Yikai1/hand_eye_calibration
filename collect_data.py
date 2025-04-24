@@ -63,48 +63,62 @@ def send_cmd(client, cmd, get_pose=True):
     get_pose: 是否需要获取pose数据
 
     返回:
-    如果get_pose为True，返回pose数据列表[x, y, z, rx, ry, rz]
+    如果get_pose为True，返回tuple (状态, pose或错误信息)
     如果get_pose为False，返回布尔值表示命令是否成功发送
     """
-    # 发送命令
     client.send(cmd.encode('utf-8'))
 
-    # 如果不需要获取pose，直接返回成功
     if not get_pose:
         response = client.recv(1024).decode('utf-8')
         logger_.info(f"response:{response}")
         return True
 
-    # 等待接收数据
-    time.sleep(0.1)  # 给予系统响应时间
-
-    # 接收响应数据
-    response = client.recv(1024).decode('utf-8')
+    time.sleep(0.1)
+    response = client.recv(4096).decode('utf-8')  # 增大接收缓冲区
+    logger_.info(f'response:{response}')
 
     try:
-        # 解析JSON响应
-        data = json.loads(response)
+        decoder = json.JSONDecoder()
+        data_list = []
+        index = 0
+        # 分割并解析所有可能的JSON对象
+        while index < len(response):
+            try:
+                # 跳过空白字符
+                while index < len(response) and response[index].isspace():
+                    index += 1
+                if index >= len(response):
+                    break
+                obj, idx = decoder.raw_decode(response[index:])
+                data_list.append(obj)
+                index += idx
+            except json.JSONDecodeError as e:
+                logger_.error(f"JSON解析错误：{str(e)}")
+                break
 
-        logger_.info(f'data:{data}')
+        # 寻找最后一个包含目标状态的响应
+        target_data = None
+        for data in reversed(data_list):
+            if data.get("state") == "current_arm_state":
+                target_data = data
+                break
 
-        # 检查响应状态
-        if data.get("state") != "current_arm_state":
-            return False, "响应状态错误"
+        if not target_data:
+            return False, "未找到有效的机械臂状态响应"
 
+        # 检查错误码
+        if target_data["arm_state"]["err"] != [0]:
+            return False, f"机械臂报错: {target_data['arm_state']['err']}"
 
-        # 获取pose数据并转换为物理单位
-        pose_raw = data["arm_state"]["pose"]
-
-        # 根据协议转换单位:
-        # 位置(x,y,z): 从 0.001mm 转换为 m
-        # 姿态(rx,ry,rz): 从 0.001rad 转换为 rad
+        # 转换单位
+        pose_raw = target_data["arm_state"]["pose"]
         pose_converted = [
             pose_raw[0] / 1000000,  # x: 0.001mm → m
             pose_raw[1] / 1000000,  # y: 0.001mm → m
             pose_raw[2] / 1000000,  # z: 0.001mm → m
-            pose_raw[3] / 1000,  # rx: 0.001rad → rad
-            pose_raw[4] / 1000,  # ry: 0.001rad → rad
-            pose_raw[5] / 1000  # rz: 0.001rad → rad
+            pose_raw[3] / 1000,    # rx: 0.001rad → rad
+            pose_raw[4] / 1000,    # ry: 0.001rad → rad
+            pose_raw[5] / 1000     # rz: 0.001rad → rad
         ]
 
         return True, pose_converted
@@ -112,9 +126,9 @@ def send_cmd(client, cmd, get_pose=True):
     except json.JSONDecodeError:
         return False, "JSON解析错误"
     except KeyError as e:
-        return False, f"缺少关键数据: {e}"
+        return False, f"响应缺少关键字段: {str(e)}"
     except Exception as e:
-        return False, f"获取pose时发生错误: {str(e)}"
+        return False, f"处理响应时发生错误: {str(e)}"
 #
 def displayD435():
 
