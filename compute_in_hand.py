@@ -82,6 +82,7 @@ def func():
     N = len(img_points)
 
     # 标定,得到图案在相机坐标系下的位姿
+    # 不能用标定板标定的相机内参，不用cv2.calibrateCamera去做，用solve_pnp
     ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(obj_points, img_points, size, None, None)
 
     # logger_.info(f"内参矩阵:\n:{mtx}" ) # 内参数矩阵

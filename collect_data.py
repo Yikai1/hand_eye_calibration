@@ -7,19 +7,19 @@ import sys
 import numpy as np
 import cv2
 import pyrealsense2 as rs
-
+import math
 from libs.log_setting import CommonLog
 from libs.auxiliary import create_folder_with_date, get_ip, popup_message
-
+from fairino import Robot
 cam0_origin_path = create_folder_with_date() # 提前建立好的存储照片文件的目录
-
+# cam0_origin_path = '/home/wql/kyk/hand_eye_calibration/eye_hand_data/data2025071806'
 
 logger_ = logging.getLogger(__name__)
 logger_ = CommonLog(logger_)
 
 def callback(frame):
 
-    scaling_factor = 2.0
+    scaling_factor = 1.0
     global count
 
     cv_img = cv2.resize(frame, None, fx=scaling_factor, fy=scaling_factor, interpolation=cv2.INTER_AREA)
@@ -29,16 +29,26 @@ def callback(frame):
 
     if k == ord('s'):  # 若检测到按键 ‘s’，打印字符串
 
-        socket_command = '{"command": "get_current_arm_state"}'
-        state,pose = send_cmd(client,socket_command)
-        logger_.info(f'获取状态：{"成功" if state else "失败"}，{f"当前位姿为{pose}" if state else None}')
-        if state:
+        # socket_command = '{"command": "get_current_arm_state"}'
+        # state,pose = send_cmd(client,socket_command)
+        ret = robot.GetActualTCPPose()
+        pose = ret[1]
+        pose_converted = [
+            pose[0] / 1000,  # x: mm → m
+            pose[1] / 1000,  # y: mm → m
+            pose[2] / 1000,  # z: mm → m
+            math.radians(pose[3]),   # rx: deg → rad
+            math.radians(pose[4]),   # ry: deg → rad
+            math.radians(pose[5])    # rz: deg → rad
+        ]
+        logger_.info({f"当前位姿为{pose_converted}"})
+        if pose:
 
             filename = os.path.join(cam0_origin_path,"poses.txt")
 
             with open(filename, 'a+') as f:
                 # 将列表中的元素用空格连接成一行
-                pose_ = [str(i) for i in pose]
+                pose_ = [str(i) for i in pose_converted]
                 new_line = f'{",".join(pose_)}\n'
                 # 将新行附加到文件的末尾
                 f.write(new_line)
@@ -134,7 +144,7 @@ def displayD435():
 
     pipeline = rs.pipeline()
     config = rs.config()
-    config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
+    config.enable_stream(rs.stream.color, 1280, 720, rs.format.bgr8, 30)
 
     try:
         pipeline.start(config)
@@ -167,22 +177,26 @@ def displayD435():
 
 if __name__ == '__main__':
 
-    robot_ip = get_ip()
+    # robot_ip = get_ip()
 
 
 
-    logger_.info(f'robot_ip:{robot_ip}')
+    # logger_.info(f'robot_ip:{robot_ip}')
 
-    if robot_ip:
+    # if robot_ip:
 
-        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client.connect((robot_ip, 8080))
-        socket_command = '{"command":"set_change_work_frame","frame_name":"Base"}'
-        send_cmd(client,socket_command,get_pose = False)
+    #     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #     client.connect((robot_ip, 8080))
+    #     socket_command = '{"command":"set_change_work_frame","frame_name":"Base"}'
+    #     send_cmd(client,socket_command,get_pose = False
+    # else:
 
-    else:
+    #     popup_message("提醒", "机械臂ip没有ping通")
+    #     sys.exit(1)
 
-        popup_message("提醒", "机械臂ip没有ping通")
-        sys.exit(1)
-
+    robot = Robot.RPC("192.168.1.200")
+    # get current pose, transform it and move robot to new pose
+    ret = robot.GetActualTCPPose()
+    pose = ret[1]
+    print(pose)
     displayD435()
